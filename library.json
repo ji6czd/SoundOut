@@ -1,0 +1,16 @@
+{
+  "name": "SoundOut",
+  "description": "An ESP32 Arduino board",
+  "keywords": "M5StickCPlus",
+  "authors": {
+    "name": "KIRIAKE Masanori",
+    "url": "https://www.rd01.net"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ji6czd/SoundOut.git"
+  },
+  "version": "0.0.1",
+  "framework": "arduino",
+  "platforms": "espressif32"
+}
