@@ -63,6 +63,7 @@ void soundOut::NumberOut(int num)
   int i=100000000;
   for (i; (num && !(num / i)); i/=10)
     ; // 空のループ
+  if (num == 0) i = 1;
   for (i; i > 0; i /= 10) {
     unsigned char s; // 符号テーブル配列の添字
     int div;
