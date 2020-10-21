@@ -1,43 +1,36 @@
 #ifndef _SOUNDOUT_HPP_
 #define _SOUNDOUT_HPP_
 #include <cstdint>
+#include "MorseTable.h"
 
-using namespace std;
-enum soundOut_Mode_t {
-  length,
-  pitch
+struct beepCmd {
+  uint8_t type;
+  uint16_t len;
+  uint16_t freq;
 };
-class soundOut {
+
+class SoundOut {
 public:
-  void begin(uint8_t outPin, uint8_t outVol);
-  static void beep(int f, int m);
-  static void waitBeep(int f, int m);
-  static void morseOut(const char c);
-  static void NumberOut(int num);
-  static void speakOut(const char* s);
-  static void stop();
-  static void setMode(soundOut_Mode_t mode) { oMode = mode; };
-  static soundOut_Mode_t getMode() { return oMode; };
-  static void setSpeed(uint8_t speed) { cpm = speed; };
-  static uint8_t getSpeed() { return cpm; };
+  int begin(uint8_t pin, uint8_t volume);
+  void beepOut(uint16_t freq, uint16_t length);
+  void morseOut(const char* s);
+  void numberOut(uint16_t num);
+  uint16_t getSpeed() {return cpm; };
+  uint16_t setSpeed(int speed) { return cpm = speed; };
 private:
-  const static int resolution = 8;
-  static int freq;
-  static int mSec;
-  static int vol;
-  static void beepFunc();
+  static QueueHandle_t xBeepCmdQueue;
+  static SemaphoreHandle_t xBeepMutex;;
+  static String sSharedOutStr;
+  static uint8_t cpm;
+  static uint8_t vol;
+  static void beepFunc(uint16_t freq, uint16_t length);
   static void morseLong();
   static void morseShort();
   static void morseSpace();
-  static void lowTone();
-  static void highTone();
-  static unsigned int cpm;
-  static unsigned int tone;
-  static soundOut_Mode_t oMode;
-	void static DAC_Create();
-	static void DAC_Release();
-	static int DAC_Write(int len, int16_t *wav);
+  static char morseFunc(char c);
+  static uint16_t numberFunc(uint16_t n);
+  static void beepTask(void* arg);
 };
-extern soundOut sOut;
+extern SoundOut sOut;
 
 #endif

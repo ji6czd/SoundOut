@@ -3,64 +3,62 @@
 #include "Arduino.h"
 #include "soundOut.hpp"
 
-#include <thread>
-#include <cstdint>
-#include "MorseTable.h"
+SoundOut sOut;
+QueueHandle_t SoundOut::xBeepCmdQueue;
+SemaphoreHandle_t SoundOut::xBeepMutex;;
+String SoundOut::sSharedOutStr;
+uint8_t SoundOut::cpm;
+uint8_t SoundOut::vol;
 
-using namespace std;
-int soundOut::freq, soundOut::mSec, soundOut::vol;
-soundOut_Mode_t soundOut::oMode;
-unsigned int soundOut::tone=1500;
-unsigned int soundOut::cpm=10;
+const uint16_t morseTone=1500;
+const TickType_t xTicksToWait = 10U; // [ms]
 
-soundOut sOut;
-
-void soundOut::beep(int f, int m)
+void SoundOut::beepFunc(uint16_t freq, uint16_t length)
 {
-  freq=f;
-  mSec=m;
-  thread th(beepFunc);
-  th.detach();
+  ledcWriteTone(0, freq);
+  ledcWrite(0, 100);
+  delay(length);
+  ledcWriteTone(0, 0);
 }
 
-void soundOut::waitBeep(int f, int m)
-{
-  freq=f;
-  mSec=m;
-  thread th(beepFunc);
-  th.join();
+void SoundOut::morseShort() {
+  beepFunc(morseTone, 1000/(cpm/2));
+  delay(1000/(cpm/2));
 }
 
-void soundOut::beepFunc()
-{
-	ledcWriteTone(0, freq);
-	ledcWrite(0, vol);
-	delay(mSec);
-	ledcWriteTone(0, 0);
+void SoundOut::morseLong() {
+  beepFunc(morseTone, 1000/(cpm/2)*3);
+  delay(1000/(cpm/2));
 }
 
-void soundOut::morseOut(const char c)
+void SoundOut::morseSpace()
 {
-	if (isspace(c)) {
-		morseSpace();
-		}
-	else if (isalnum(c)) {
-		unsigned char s = MorseTable[toupper(c)-0x30];
-		while (s != 1) {
-			if (s & 0b1) {
-				morseLong();
-			} else {
-				morseShort();
-			}
-			s >>= 1;
-			}
-	}
-	morseSpace();
+  delay(1000/(cpm/2)*3);
 }
 
-void soundOut::NumberOut(int num)
+char SoundOut::morseFunc(char c)
 {
-  int i=100000000;
+  if (isspace(c)) {
+    morseSpace();
+  }
+  else if (isalnum(c)) {
+    unsigned char s = MorseTable[toupper(c)-0x30];
+    while (s != 1) {
+      if (s & 0b1) {
+	morseLong();
+      } else {
+	morseShort();
+      }
+      s >>= 1;
+    }
+  }
+  morseSpace();
+  return c;
+}
+
+uint16_t SoundOut::numberFunc(uint16_t num)
+{
+  uint16_t i=10000;
   for (i; (num && !(num / i)); i/=10)
     ; // 空のループ
   if (num == 0) i = 1;
@@ -71,49 +69,113 @@ void soundOut::NumberOut(int num)
     s = NumberTable[div];
     while (s != 1) {
       if (s & 0b1) {
-	if (oMode == length) morseLong();
-	else highTone();
+	morseLong();
       } else {
-	if (oMode == length) morseShort();
-	else lowTone();
+	morseShort();
       }
       s >>= 1;
     }
     morseSpace();
     num -= div*i;
   }
+  return num;
 }
 
-void soundOut::morseShort() {
-	waitBeep(tone, 1000/(cpm/2));
-	delay(1000/(cpm/2));
-}
-
-void soundOut::morseLong() {
-	waitBeep(tone, 1000/(cpm/2)*3);
-	delay(1000/(cpm/2));
-}
-
-void soundOut::morseSpace()
+void SoundOut::beepTask(void* arg)
 {
-	delay(1000/(cpm/2)*3);
+  BaseType_t xStatus;
+  beepCmd cmd;
+  xSemaphoreGive(xBeepMutex);
+
+  while(1) {
+    xStatus = xSemaphoreTake(xBeepMutex, xTicksToWait);
+    if (xStatus != pdTRUE) {
+      xSemaphoreGive(xBeepMutex);
+      break;
+    }
+    xStatus = xQueueReceive(xBeepCmdQueue, &cmd, xTicksToWait);
+    if(xStatus == pdPASS) {
+      if (cmd.freq == 0) {
+	// ビープ以外のコマンド
+	if (sSharedOutStr.length()) {
+	  uint16_t i=0;
+	  char c;
+	  while ((c = sSharedOutStr.charAt(i))) {
+	    morseFunc(c);
+	    i++;
+	  }
+	  sSharedOutStr = "";
+	  xSemaphoreGive(xBeepMutex);
+	}
+	else {
+	  numberFunc(cmd.len);
+	  xSemaphoreGive(xBeepMutex);
+	}
+      }
+      else {
+	beepFunc(cmd.freq, cmd.len);
+	xSemaphoreGive(xBeepMutex);
+      }
+    } else {
+      xSemaphoreGive(xBeepMutex);
+    }
+  }
 }
 
-void soundOut::highTone()
+void SoundOut::morseOut(const char* str)
 {
-  waitBeep(2250, 1000/(cpm/2));
-  delay(1000/(cpm/2));
+  BaseType_t xStatus = xSemaphoreTake(xBeepMutex, xTicksToWait);
+  if (xStatus != pdTRUE) {
+    xSemaphoreGive(xBeepMutex);
+  }
+  if (!sSharedOutStr.length()) {
+    sSharedOutStr = str;
+  }
+  beepCmd cmd;
+  cmd.type=2; // string morse
+  cmd.freq=0;
+  cmd.len=0;
+  xStatus = xQueueSend(xBeepCmdQueue, &cmd, 0);
+  xSemaphoreGive(xBeepMutex);
 }
 
-void soundOut::lowTone()
+void SoundOut::beepOut(uint16_t freq, uint16_t len)
 {
-  waitBeep(1500, 1000/(cpm/2));
-  delay(1000/(cpm/2));
+  BaseType_t xStatus;
+  beepCmd cmd;
+  cmd.type=0; // Beep
+  cmd.freq=freq;
+  cmd.len=len;
+  xStatus = xQueueSend(xBeepCmdQueue, &cmd, 0);
+  return;
 }
 
-void soundOut::begin(uint8_t outPin, uint8_t outVol)
+void SoundOut::numberOut(uint16_t num)
 {
-	ledcSetup(0, 1000, 13);
-	ledcAttachPin(outPin, 0);
-	vol=outVol;
+  BaseType_t xStatus;
+  beepCmd cmd;
+  cmd.type=1; // number
+  cmd.freq=0;
+  cmd.len=num;
+  xStatus = xQueueSend(xBeepCmdQueue, &cmd, 0);
+  return;
+}
+
+int SoundOut::begin(uint8_t pin, uint8_t volume)
+{
+  ledcWriteTone(0, 0);
+  ledcAttachPin(pin, 0);
+  xBeepCmdQueue = xQueueCreate(8, sizeof(beepCmd));
+  xBeepMutex = xSemaphoreCreateMutex();
+  if(xBeepMutex != NULL) {
+    sSharedOutStr = "";
+    cpm=40;
+    vol=volume;
+    xTaskCreate(beepTask, "beepTask", 4096, NULL, 2, NULL);
+  } else {
+    return -1;
+  }
+  beepOut(2000, 100);
+  beepOut (1000, 100);
+  return 0;
 }
