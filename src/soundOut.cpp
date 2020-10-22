@@ -3,7 +3,7 @@
 #include "Arduino.h"
 #include "soundOut.hpp"
 
-SoundOut sOut;
+SoundOut SOut;
 QueueHandle_t SoundOut::xBeepCmdQueue;
 SemaphoreHandle_t SoundOut::xBeepMutex;;
 String SoundOut::sSharedOutStr;

@@ -31,6 +31,6 @@ private:
   static uint16_t numberFunc(uint16_t n);
   static void beepTask(void* arg);
 };
-extern SoundOut sOut;
+extern SoundOut SOut;
 
 #endif
