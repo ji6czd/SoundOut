@@ -9,7 +9,7 @@ SemaphoreHandle_t SoundOut::xBeepMutex;;
 String SoundOut::sSharedOutStr;
 uint8_t SoundOut::cpm;
 uint8_t SoundOut::vol;
-
+bool SoundOut::progress;
 const uint16_t morseTone=1500;
 const TickType_t xTicksToWait = 10U; // [ms]
 
@@ -17,7 +17,15 @@ void SoundOut::beepFunc(uint16_t freq, uint16_t length)
 {
   ledcWriteTone(0, freq);
   ledcWrite(0, 100);
-  delay(length);
+  while (length / 100) {
+    delay(100);
+    if (!progress)  {
+      length=0;
+      break;
+    }
+    length -= 100;
+  }
+  if (length) delay(length);
   ledcWriteTone(0, 0);
 }
 
@@ -68,6 +76,7 @@ uint16_t SoundOut::numberFunc(uint16_t num)
     div = num / i;
     s = NumberTable[div];
     while (s != 1) {
+      if (!progress) return 0;
       if (s & 0b1) {
 	morseLong();
       } else {
@@ -86,21 +95,21 @@ void SoundOut::beepTask(void* arg)
   BaseType_t xStatus;
   beepCmd cmd;
   xSemaphoreGive(xBeepMutex);
-
   while(1) {
     xStatus = xSemaphoreTake(xBeepMutex, xTicksToWait);
     if (xStatus != pdTRUE) {
       xSemaphoreGive(xBeepMutex);
-      break;
+       break;
     }
     xStatus = xQueueReceive(xBeepCmdQueue, &cmd, xTicksToWait);
     if(xStatus == pdPASS) {
+      progress = true;
       if (cmd.freq == 0) {
 	// ビープ以外のコマンド
 	if (sSharedOutStr.length()) {
 	  uint16_t i=0;
 	  char c;
-	  while ((c = sSharedOutStr.charAt(i))) {
+	  while ((c = sSharedOutStr.charAt(i)) && progress) {
 	    morseFunc(c);
 	    i++;
 	  }
@@ -119,6 +128,7 @@ void SoundOut::beepTask(void* arg)
     } else {
       xSemaphoreGive(xBeepMutex);
     }
+    progress = false;
   }
 }
 
@@ -146,6 +156,7 @@ void SoundOut::beepOut(uint16_t freq, uint16_t len)
   cmd.type=0; // Beep
   cmd.freq=freq;
   cmd.len=len;
+  progress=true;
   xStatus = xQueueSend(xBeepCmdQueue, &cmd, 0);
   return;
 }

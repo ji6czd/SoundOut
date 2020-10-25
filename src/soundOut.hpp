@@ -17,12 +17,15 @@ public:
   void numberOut(uint16_t num);
   uint16_t getSpeed() {return cpm; };
   uint16_t setSpeed(int speed) { return cpm = speed; };
+  bool isProgress() { return progress; };
+  bool stop() { progress = false; }; 
 private:
   static QueueHandle_t xBeepCmdQueue;
   static SemaphoreHandle_t xBeepMutex;;
   static String sSharedOutStr;
   static uint8_t cpm;
   static uint8_t vol;
+  static bool progress;
   static void beepFunc(uint16_t freq, uint16_t length);
   static void morseLong();
   static void morseShort();
