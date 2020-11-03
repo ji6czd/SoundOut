@@ -12,18 +12,21 @@ uint8_t SoundOut::vol;
 bool SoundOut::progress;
 const uint16_t morseTone=1500;
 const TickType_t xTicksToWait = 10U; // [ms]
+const uint8_t beepUnitLen=20;
 
 void SoundOut::beepFunc(uint16_t freq, uint16_t length)
 {
-  ledcWriteTone(0, freq);
-  ledcWrite(0, vol);
-  while (length / 100) {
-    delay(100);
+  if (freq) {
+    ledcWriteTone(0, freq);
+    ledcWrite(0, vol);
+  }
+  while (length / beepUnitLen) {
+    delay(beepUnitLen);
     if (!progress)  {
       length=0;
       break;
     }
-    length -= 100;
+    length -= beepUnitLen;
   }
   if (length) delay(length);
   ledcWriteTone(0, 0);
@@ -31,17 +34,17 @@ void SoundOut::beepFunc(uint16_t freq, uint16_t length)
 
 void SoundOut::morseShort() {
   beepFunc(morseTone, 1000/(cpm/2));
-  delay(1000/(cpm/2));
+  beepFunc(0, 1000/(cpm/2));
 }
 
 void SoundOut::morseLong() {
   beepFunc(morseTone, 1000/(cpm/2)*3);
-  delay(1000/(cpm/2));
+  beepFunc(0, 1000/(cpm/2));
 }
 
 void SoundOut::morseSpace()
 {
-  delay(1000/(cpm/2)*3);
+  beepFunc(0, 1000/(cpm/2)*3);
 }
 
 char SoundOut::morseFunc(char c)
@@ -51,7 +54,7 @@ char SoundOut::morseFunc(char c)
   }
   else if (isalnum(c)) {
     unsigned char s = MorseTable[toupper(c)-0x30];
-    while (s != 1) {
+    while (s != 1 && progress) {
       if (s & 0b1) {
 	morseLong();
       } else {
@@ -60,7 +63,7 @@ char SoundOut::morseFunc(char c)
       s >>= 1;
     }
   }
-  morseSpace();
+  if (progress) { morseSpace(); }
   return c;
 }
 

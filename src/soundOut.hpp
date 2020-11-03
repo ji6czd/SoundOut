@@ -19,7 +19,7 @@ public:
   uint16_t getSpeed() {return cpm; };
   uint16_t setSpeed(int speed) { return cpm = speed; };
   bool isProgress() { return progress; };
-  bool stop() { return progress = false; }; 
+  bool stop() { progress = false; delay(50); return progress;}; 
 private:
   static QueueHandle_t xBeepCmdQueue;
   static SemaphoreHandle_t xBeepMutex;;
