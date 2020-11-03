@@ -139,12 +139,12 @@ void SoundOut::morseOut(const char* str)
   }
   if (!sSharedOutStr.length()) {
     sSharedOutStr = str;
+    beepCmd cmd;
+    cmd.type=2; // string morse
+    cmd.freq=0;
+    cmd.len=0;
+    xStatus = xQueueSend(xBeepCmdQueue, &cmd, 0);
   }
-  beepCmd cmd;
-  cmd.type=2; // string morse
-  cmd.freq=0;
-  cmd.len=0;
-  xStatus = xQueueSend(xBeepCmdQueue, &cmd, 0);
   xSemaphoreGive(xBeepMutex);
 }
 

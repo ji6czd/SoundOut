@@ -1,6 +1,7 @@
 #ifndef _SOUNDOUT_HPP_
 #define _SOUNDOUT_HPP_
 #include <cstdint>
+#include "Arduino.h"
 #include "MorseTable.h"
 
 struct beepCmd {
@@ -18,7 +19,7 @@ public:
   uint16_t getSpeed() {return cpm; };
   uint16_t setSpeed(int speed) { return cpm = speed; };
   bool isProgress() { return progress; };
-  bool stop() { progress = false; }; 
+  bool stop() { return progress = false; }; 
 private:
   static QueueHandle_t xBeepCmdQueue;
   static SemaphoreHandle_t xBeepMutex;;
