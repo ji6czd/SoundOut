@@ -31,6 +31,7 @@ private:
   static void morseLong();
   static void morseShort();
   static void morseSpace();
+  static void morseSeperate();
   static char morseFunc(char c);
   static uint16_t numberFunc(uint16_t n);
   static void beepTask(void* arg);

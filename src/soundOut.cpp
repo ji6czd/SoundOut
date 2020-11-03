@@ -33,18 +33,23 @@ void SoundOut::beepFunc(uint16_t freq, uint16_t length)
 }
 
 void SoundOut::morseShort() {
-  beepFunc(morseTone, 1000/(cpm/2));
-  beepFunc(0, 1000/(cpm/2));
+  beepFunc(morseTone, 6000/cpm);
+  beepFunc(0, 6000/cpm);
 }
 
 void SoundOut::morseLong() {
-  beepFunc(morseTone, 1000/(cpm/2)*3);
-  beepFunc(0, 1000/(cpm/2));
+  beepFunc(morseTone, (6000/cpm)*3);
+  beepFunc(0, 6000/cpm);
+}
+
+void SoundOut::morseSeperate()
+{
+  beepFunc(0, (6000/cpm)*3);
 }
 
 void SoundOut::morseSpace()
 {
-  beepFunc(0, 1000/(cpm/2)*3);
+  beepFunc(0, (6000/cpm)*7);
 }
 
 char SoundOut::morseFunc(char c)
@@ -63,7 +68,7 @@ char SoundOut::morseFunc(char c)
       s >>= 1;
     }
   }
-  if (progress) { morseSpace(); }
+  if (progress) { morseSeperate(); }
   return c;
 }
 
@@ -182,7 +187,7 @@ int SoundOut::begin(uint8_t pin, uint8_t volume)
   xBeepMutex = xSemaphoreCreateMutex();
   if(xBeepMutex != NULL) {
     sSharedOutStr = "";
-    cpm=40;
+    cpm=80;
     vol=volume;
     xTaskCreate(beepTask, "beepTask", 4096, NULL, 2, NULL);
   } else {
