@@ -104,8 +104,7 @@ void SoundOut::beepTask(void* arg)
     xStatus = xQueueReceive(xBeepCmdQueue, &cmd, xTicksToWait);
     if(xStatus == pdPASS) {
       progress = true;
-      if (cmd.freq == 0) {
-	// ビープ以外のコマンド
+      if (cmd.type == 2) {
 	if (sSharedOutStr.length()) {
 	  uint16_t i=0;
 	  char c;
@@ -114,14 +113,14 @@ void SoundOut::beepTask(void* arg)
 	    i++;
 	  }
 	  sSharedOutStr = "";
-	  xSemaphoreGive(xBeepMutex);
 	}
-	else {
-	  numberFunc(cmd.len);
-	  xSemaphoreGive(xBeepMutex);
-	}
+	xSemaphoreGive(xBeepMutex);
       }
-      else {
+      else if (cmd.type == 1) {
+	numberFunc(cmd.len);
+	xSemaphoreGive(xBeepMutex);
+      }
+      else if (cmd.type == 0) {
 	beepFunc(cmd.freq, cmd.len);
 	xSemaphoreGive(xBeepMutex);
       }
