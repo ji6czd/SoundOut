@@ -16,7 +16,7 @@ const TickType_t xTicksToWait = 10U; // [ms]
 void SoundOut::beepFunc(uint16_t freq, uint16_t length)
 {
   ledcWriteTone(0, freq);
-  ledcWrite(0, 100);
+  ledcWrite(0, vol);
   while (length / 100) {
     delay(100);
     if (!progress)  {
@@ -187,6 +187,6 @@ int SoundOut::begin(uint8_t pin, uint8_t volume)
     return -1;
   }
   beepOut(2000, 100);
-  beepOut (1000, 100);
+  beepOut(1000, 100);
   return 0;
 }
