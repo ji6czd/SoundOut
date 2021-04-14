@@ -1,6 +1,5 @@
 #ifndef _SOUNDOUT_HPP_
 #define _SOUNDOUT_HPP_
-#include <_types/_uint8_t.h>
 #include <cstdint>
 #include "Arduino.h"
 #include "MorseTable.h"

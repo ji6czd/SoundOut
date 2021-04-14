@@ -6,8 +6,6 @@ void setup()
   M5.begin();
   sOut.begin(2, 100);
   randomSeed(analogRead(0));
-  sOut.waitBeep(2000, 80);
-  sOut.waitBeep(1000, 80);
 }
 
 void loop()
